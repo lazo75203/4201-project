@@ -1,70 +1,42 @@
-import pytesseract
+# test2.py
+from pathlib import Path
 from PIL import Image, ImageEnhance, ImageFilter
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+import pytesseract, sys, platform
 
-#change this line to your filepath
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+if platform.system() == "Windows":
+    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
-# preprocess the image to improve recognition 
-def preprocess_image(image_path):
-    # Open the image
-    image = Image.open(image_path)
-    
-    # Convert to grayscale
-    image = image.convert('L')
-    
-    # Enhance the contrast
-    enhancer = ImageEnhance.Contrast(image)
-    image = enhancer.enhance(2)  # Increase contrast to make text more prominent
-    
-    # Apply median filter
-    image = image.filter(ImageFilter.MedianFilter())
-    
-    return image
+def preprocess(p: Path) -> Image.Image:
+    img = Image.open(p).convert("L")
+    w, h = img.size
+    img = img.resize((w*2, h*2))
+    img = ImageEnhance.Contrast(img).enhance(2.0)
+    img = img.filter(ImageFilter.MedianFilter())
+    return img.point(lambda x: 255 if x > 170 else 0)
 
-# Function to extract text from the image using Tesseract OCR
-def extract_text_from_image(image_path):
-    # Preprocess the image to improve text extraction
-    image = preprocess_image(image_path)
-    
-    # Extract text using Tesseract OCR
-    text = pytesseract.image_to_string(image)
-    return text
+def ocr(p: Path) -> str:
+    img = preprocess(p)
+    return pytesseract.image_to_string(img, config="--oem 3 --psm 6 -l eng")
 
-# Function to create a PDF with the extracted text
-def create_pdf_from_text(text, output_pdf_path):
-    # Create a PDF 
-    c = canvas.Canvas(output_pdf_path, pagesize=letter)
-    
-    # setting font and size
-    c.setFont("Helvetica", 10)
-    
-    # Start writing text at a specific position (x, y)
-    y_position = 750  # Start near top of page
-    line_height = 12  # Space between lines
-    
-    # Split the text into lines and write them to the PDF
-    for line in text.split('\n'):
-        c.drawString(10, y_position, line)  # Write the text line
-        y_position -= line_height  # Move down for the next line
-        
-        # If the text goes past the page, create a new page
-        if y_position < 40:
-            c.showPage()  # Create a new page
-            c.setFont("Helvetica", 10)  # Reset font on the new page
-            y_position = 750  # Reset to top of new page
-
-    # Save the PDF
+def write_pdf(text: str, out_path: Path):
+    c = canvas.Canvas(str(out_path), pagesize=letter)
+    y = 750
+    for line in (text or "[EMPTY]").splitlines():
+        c.drawString(72, y, line[:1000])
+        y -= 14
+        if y < 72:
+            c.showPage(); y = 750
     c.save()
 
-# Main function to process the image and generate the PDF
-def image_to_pdf_with_text(image_path, output_pdf_path):
-    # Extract text from the image
-    extracted_text = extract_text_from_image(image_path)
-    
-    # Create a PDF with the extracted text
-    create_pdf_from_text(extracted_text, output_pdf_path)
+# pick image: arg1 or test.png or sample.png
+candidates = [Path(sys.argv[1])] if len(sys.argv) > 1 else []
+candidates += [Path("test.png"), Path("sample.png")]
+img_path = next((p for p in candidates if p.exists()), None)
+if not img_path:
+    raise FileNotFoundError("Provide an image or place test.png/sample.png next to test2.py")
 
-# Usage
-image_to_pdf_with_text('sample.png', 'output.pdf')#first input is image path second is document name for output
+text = ocr(img_path)
+print(text.replace("\x0c", "").strip())
+write_pdf(text, Path("output.pdf"))
