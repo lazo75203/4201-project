@@ -103,6 +103,7 @@ def _soft_variant(img: Image.Image) -> Image.Image:
     # Soft variant formula below: mild contrast + median filter
     out = ImageEnhance.Contrast(img).enhance(1.5)
     out = out.filter(ImageFilter.MedianFilter())
+    
     return out
 
 
@@ -114,6 +115,7 @@ def _hard_variant(img: Image.Image) -> Image.Image:
     out = ImageEnhance.Contrast(img).enhance(2.2)
     out = out.filter(ImageFilter.MedianFilter(size=3))
     out = out.point(lambda x: 255 if x > 160 else 0)
+    
     return out
 
 
@@ -123,6 +125,7 @@ def _score_text(text: str) -> float:
     alnum = sum(ch.isalnum() for ch in text)                              # alphanumeric characters counting
     weird = sum((not ch.isalnum()) and (not ch.isspace()) for ch in text) # weird symbols counting
     length_penalty = 0.1 * len(text)                                      # some points are taken off if text is too long
+    
     return alnum - 2 * weird + 0.01 * length_penalty
 
 
@@ -242,6 +245,7 @@ def download():
     if not pdf_path.exists():
         # if the PDF doesn't exist through up the 404 error
         return "No PDF generated yet.", 404
+      
     return send_file(pdf_path, as_attachment=True)
 
 
