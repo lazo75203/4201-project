@@ -1,5 +1,6 @@
-flask
-pillow
-pytesseract
-reportlab
-opencv-python-headless
+# Requirements for the OCR Flask application, including image processing and PDF generation
+flask                                           # Flask web framework
+pillow                                          # Image processing library
+pytesseract                                     # Tesseract OCR wrapper
+reportlab                                       # PDF generation library
+opencv-python-headless                          # OpenCV for image processing without GUI support
