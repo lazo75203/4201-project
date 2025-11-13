@@ -11,7 +11,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
-# Set environment variable to ensure Python output is unbuffered
+# Set environment variable to make sure Python output is not buffered, makes the logs appear immediately //feature :)
 ENV PYTHONUNBUFFERED=1
 
 # Command to run the Flask application when the container starts
