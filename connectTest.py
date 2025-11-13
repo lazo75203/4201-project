@@ -1,15 +1,15 @@
-# connectTest.py
-import os
-from flask import Flask, request, render_template_string
-from PIL import Image
-import numpy as np
-import cv2
+from flask import Flask, request, send_file, render_template_string
+from pathlib import Path
+from PIL import Image, ImageEnhance, ImageFilter
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 import pytesseract
+import platform
+import os
+import math
+import re
 
-# If Tesseract isn’t on PATH on Windows, uncomment and set the path:
-pytesseract.pytesseract.tesseract_cmd = "tesseract"
-
-
+# ----------------- YOUR HTML LAYOUT (UNCHANGED) -----------------
 HTML = """
 <!doctype html>
 <html>
@@ -55,61 +55,161 @@ HTML = """
         <button type="submit">Extract Text</button>
       </form>
       <hr>
-      <h3>OCR Text</h3>
+      <h3>Extracted Text:</h3>
       <pre>{{ text }}</pre>
     </div>
   </body>
 </html>
 """
 
-app = Flask(__name__)
 
-def _bytes_to_mat(b: bytes) -> np.ndarray:
-    arr = np.frombuffer(b, dtype=np.uint8)
-    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-    if img is None:
-        raise ValueError("Unable to decode image")
+
+if platform.system() == "Windows":
+    # Local dev
+    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+
+
+MAX_SIDE = 2000  
+
+def _load_and_normalize(path: Path) -> Image.Image:
+    img = Image.open(path)
+    img = img.convert("L") 
+
+    
+    w, h = img.size
+    scale = min(1.0, MAX_SIDE / max(w, h))
+    if scale < 1.0:
+        img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+
     return img
 
-def _preprocess(mat: np.ndarray) -> np.ndarray:
-    g = cv2.cvtColor(mat, cv2.COLOR_BGR2GRAY)
-    h, w = g.shape
-    if max(h, w) < 1200:
-        g = cv2.resize(g, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
-    g = cv2.fastNlMeansDenoising(g, h=7, templateWindowSize=7, searchWindowSize=21)
-    thr = cv2.adaptiveThreshold(
-        g, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY, 31, 10
-    )
-    return thr
+def _soft_variant(img: Image.Image) -> Image.Image:
+    out = ImageEnhance.Contrast(img).enhance(1.5)
+    out = out.filter(ImageFilter.MedianFilter())
+    return out
+
+def _hard_variant(img: Image.Image) -> Image.Image:
+    out = ImageEnhance.Contrast(img).enhance(2.2)
+    out = out.filter(ImageFilter.MedianFilter(size=3))
+    out = out.point(lambda x: 255 if x > 160 else 0)
+    return out
+
+def _score_text(text: str) -> float:
+    """
+    Heuristic scoring algorithm:
+      - reward letters/digits
+      - penalize weird symbols
+      - tiny outputs get a small penalty
+    """
+    alnum = sum(ch.isalnum() for ch in text)
+    weird = sum((not ch.isalnum()) and (not ch.isspace()) for ch in text)
+    length_penalty = 0.1 * len(text)
+    return alnum - 2 * weird + 0.01 * length_penalty
+
+def _clean_text(text: str) -> str:
+    text = text.replace("\x0c", "").strip()
+    return re.sub(r"[ \t]+", " ", text)
+
+def ocr_hybrid(path: str, lang: str = "eng") -> str:
+    """
+    Hybrid OCR:
+      1) normalize image
+      2) run Tesseract on soft + hard variants
+      3) score & pick best
+      4) if score is low, upscale once and retry
+    """
+    base = _load_and_normalize(Path(path))
+
+    variants = [
+        _soft_variant(base),
+        _hard_variant(base),
+    ]
+
+    config = f"--oem 3 --psm 6 -l {lang}"
+
+    best_text = ""
+    best_score = -math.inf
+
+    # Pass 1 & 2: different preprocessings
+    for v in variants:
+        txt = pytesseract.image_to_string(v, config=config)
+        s = _score_text(txt)
+        if s > best_score:
+            best_score, best_text = s, txt
+
+    # Optional escalation: if still weak, upscale once and retry
+    if best_score < 25:
+        up = base.resize(
+            (int(base.width * 1.5), int(base.height * 1.5)),
+            Image.LANCZOS,
+        )
+        txt2 = pytesseract.image_to_string(up, config=config)
+        s2 = _score_text(txt2)
+        if s2 > best_score:
+            best_score, best_text = s2, txt2
+
+    return _clean_text(best_text)
+
+# ----------------- PDF WRITER -----------------
+
+def make_pdf(text: str, pdf_file: Path):
+    c = canvas.Canvas(str(pdf_file), pagesize=letter)
+    c.setFont("Helvetica", 10)
+    y = 750
+    for line in (text or "[EMPTY]").split("\n"):
+        c.drawString(10, y, line)
+        y -= 12
+        if y < 40:
+            c.showPage()
+            c.setFont("Helvetica", 10)
+            y = 750
+    c.save()
+
+# ----------------- FLASK APP -----------------
+
+app = Flask(__name__)
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
 
 @app.get("/")
-def index():
+def home():
+    # initial page, no text yet
     return render_template_string(HTML, text="")
 
 @app.post("/upload")
 def upload():
     f = request.files.get("file")
     if not f or f.filename == "":
-        return render_template_string(HTML, text="ERROR: no file provided")
+        return render_template_string(HTML, text="No file uploaded.")
 
-    data = f.read()
+    filename = f.filename
+    path = UPLOAD_DIR / filename
+    f.save(path)
 
-    try:
-        mat = _bytes_to_mat(data)
-        proc = _preprocess(mat)
-        pil = Image.fromarray(proc)
-        text = pytesseract.image_to_string(
-            pil, lang="eng", config="--oem 3 --psm 6"
-        ).strip()
-        if not text:
-            text = "(no text detected)"
-        return render_template_string(HTML, text=f"Uploaded: {f.filename}\n\n{text}")
-    except Exception as e:
-        return render_template_string(HTML, text=f"ERROR: {e}")
+    # basic file type gate: images only for now
+    lower = filename.lower()
+    if lower.endswith(".pdf"):
+        # layout unchanged; just inform via text area
+        return render_template_string(HTML, text="PDF input not supported yet. Please upload an image (jpg, png, etc.).")
+
+    # run hybrid OCR
+    text = ocr_hybrid(str(path))
+
+    # write PDF in case you want /download or future link
+    pdf_path = UPLOAD_DIR / "text_output.pdf"
+    make_pdf(text, pdf_path)
+
+    return render_template_string(HTML, text=text)
+
+@app.get("/download")
+def download():
+    pdf_path = UPLOAD_DIR / "text_output.pdf"
+    if not pdf_path.exists():
+        # simple fallback: no pdf yet
+        return "No PDF generated yet.", 404
+    return send_file(pdf_path, as_attachment=True)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
-    app.run(host="0.0.0.0", port=port, debug=False)
-
+    app.run(host="0.0.0.0", port=port)
