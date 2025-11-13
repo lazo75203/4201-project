@@ -11,15 +11,54 @@ import pytesseract
 
 HTML = """
 <!doctype html>
-<title>OCR Demo</title>
-<h1>OCR Demo</h1>
-<form method="POST" action="/upload" enctype="multipart/form-data">
-  <input type="file" name="file" accept="image/*,.pdf">
-  <button type="submit">Extract Text</button>
-</form>
-<hr>
-<h3>OCR Text</h3>
-<pre>{{ text }}</pre>
+<html>
+  <head>
+    <title>Intro to AI CSCE 4201 Picture to Text Scanner</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+        display: flex;
+        align-items: center;      /* vertical center */
+        justify-content: center;  /* horizontal center */
+        min-height: 100vh;
+      }
+      .container {
+        background: #ffffff;
+        padding: 24px 32px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        text-align: center;
+        max-width: 800px;
+        width: 100%;
+      }
+      form {
+        margin-bottom: 16px;
+      }
+      pre {
+        text-align: left;       /* keep OCR text readable */
+        background: #f0f0f0;
+        padding: 12px;
+        border-radius: 4px;
+        max-height: 400px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Intro to AI CSCE 4201<br> Picture to Text Scanner</h1>
+      <form method="POST" action="/upload" enctype="multipart/form-data">
+        <input type="file" name="file" accept="image/*,.pdf">
+        <button type="submit">Extract Text</button>
+      </form>
+      <hr>
+      <h3>OCR Text</h3>
+      <pre>{{ text }}</pre>
+    </div>
+  </body>
+</html>
 """
 
 app = Flask(__name__)
