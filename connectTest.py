@@ -7,7 +7,8 @@ import cv2
 import pytesseract
 
 # If Tesseract isn’t on PATH on Windows, uncomment and set the path:
-# pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+pytesseract.pytesseract.tesseract_cmd = "tesseract"
+
 
 HTML = """
 <!doctype html>

@@ -2,4 +2,4 @@ flask
 pillow
 pytesseract
 reportlab
-opencv-python
+opencv-python-headless
