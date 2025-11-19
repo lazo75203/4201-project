@@ -1,7 +1,7 @@
 # Requirements for the OCR Flask application when deployed for web hosting
 
-flask                                           
-pillow                                          
-pytesseract                                     
-reportlab                                       
-opencv-python-headless                          
+flask
+pillow
+pytesseract
+reportlab
+opencv-python-headless
