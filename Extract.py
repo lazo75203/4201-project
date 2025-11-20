@@ -68,7 +68,7 @@ HTML = """
     </head>
     <body>
         <div class="container">
-            <h1>Intro to AI CSCE 4201 <br> Picture to Text Scanner</h1>
+            <h1>Intro to AI CSCE 4201 <br> Image to Text Scanner</h1>
             <form method="POST" action="/upload" enctype="multipart/form-data">
                 <input type="file" name="file" accept="image/*,.pdf">
                 <button type="submit">Extract Text</button>
