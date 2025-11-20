@@ -15,4 +15,4 @@ COPY . .
 ENV PYTHONUNBUFFERED=1
 
 # Command to run the Flask application when the container starts
-CMD ["python", "connectTest.py"]
+CMD ["python", "Extract.py"]
