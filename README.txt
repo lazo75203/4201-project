@@ -18,3 +18,10 @@ Terminal Running:
 To run this program in your terminal, ensure that Python 3.8 or higher is installed on the running machine. Then install the required dependencies (libraries and python methods), you can use the commnad "pip install -r requirements.txt" to do this quickly, it's in the repo for ease of use/access.
 You must also install Tesseract OCR the machine you are running this on if you choose to run it in terminal, you can find the installation instructions here: https://github.com/tesseract-ocr/tesseract.
 After ensuring the requirements and Tessaract are installed, you can enter the command "python Extract.py" in the terminal of your local machine to run the program, it will make a flask server and give you a local host link to open in your browser to use the program.
+
+Program Use:
+    1. In the web app opened, upload any image file (jpeg, png, tiff, etc.) by pressing "Upload" then press "Extract".
+    2. After pressing "Extract", the extracted text will be displayed in the window below.
+    3. The Extracted text should be given the option to download a pdf with the extracted text, if prompted by browser about safety of file, press keep and download.
+
+Disclaimer - Uploading a pdf to the program in the web app is not allowed, this program only supports image files for text extraction.
