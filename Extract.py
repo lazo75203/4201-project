@@ -137,21 +137,21 @@ def scoreText(text: str) -> float:
     if not text:
         return -math.inf  # Return negative infinity for empty text
     
-    alnum = sum(char.isalnum() for char in text)                                # letters/digits count
-    weird = sum((not char.isalnum()) and (not char.isspace()) for char in text) # weird characters count (punctuation, symbols, etc)
+    alphanum = sum(char.isalnum() for char in text)                                # letters/digits count
+    notAlphNum = sum((not char.isalnum()) and (not char.isspace()) for char in text) # weird characters count (punctuation, symbols, etc)
     total = len(text)                                                           # total characters count
     
-    # calculate density of alphanumeric characters
-    density = alnum / total
+    # calculate density of alphanumeric characters, if the total is zero then density is zero to avoid division by zero, that would crash the program
+    density = alphanum / total if total else 0
     
     # returning final score based on weighted factors, higher is better
-    return alnum + 40 * density - 3 * weird
+    return alphanum + 15 * density - 1.0 * notAlphNum
 
 # Defintion for cleaning up text, removing dragging newlines, excessive spaces, unnecessary characters
 def cleanText(text: str) -> str:
     text = text.replace("\x0c", "").strip()  # Remove form feed characters, clean edges
 
-    return re.sub(r'[ \t]+', ' ', text)      # Replace multiple spaces/tabs with single space
+    return text # Replace multiple spaces/tabs with single space
 
 # Defintion for OCR calculation
 def ocrCalculate(path: str, lang: str = "eng") -> str:
@@ -167,7 +167,7 @@ def ocrCalculate(path: str, lang: str = "eng") -> str:
     
     configuration = [
         f"--oem 3 --psm 6 -l {lang}",  # Default configuration
-        f"--oem 3 --psm 6 -l {lang}",  # Assume a single column of text
+        f"--oem 3 --psm 6 -l {lang}",  # Same as above, can add more configurations if needed for later testing
     ]
     
     bestText = ""

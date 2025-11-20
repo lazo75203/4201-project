@@ -17,4 +17,4 @@ Terminal Running:
 
 To run this program in your terminal, ensure that Python 3.8 or higher is installed on the running machine. Then install the required dependencies (libraries and python methods), you can use the commnad "pip install -r requirements.txt" to do this quickly, it's in the repo for ease of use/access.
 You must also install Tesseract OCR the machine you are running this on if you choose to run it in terminal, you can find the installation instructions here: https://github.com/tesseract-ocr/tesseract.
-After ensuring the requirements and Tessaract are installed, you can enter the command "python connectTest.py" in the terminal of your local machine to run the program, it will make a flask server and give you a local host link to open in your browser to use the program.
+After ensuring the requirements and Tessaract are installed, you can enter the command "python Extract.py" in the terminal of your local machine to run the program, it will make a flask server and give you a local host link to open in your browser to use the program.

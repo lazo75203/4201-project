@@ -1,4 +1,4 @@
-# Requirements for the OCR Flask application when deployed for web hosting
+# Requirements for the OCR Flask application when deployed for web
 
 flask
 pillow
